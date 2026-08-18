@@ -192,6 +192,25 @@ func TestTOTPGate_BlocksWithoutCookie(t *testing.T) {
 		t.Errorf("GET /version without cookie should serve the login page, got: %s", w.Body.String())
 	}
 
+	// The remember.js helper the login page embeds must be reachable without
+	// a cookie (it is part of the login flow) and serve the snapshot script.
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/auth/totp/remember.js", nil))
+	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), "sessionStorage.setItem('yopass_totp_next'") {
+		t.Errorf("GET /auth/totp/remember.js: code=%d body=%s", w.Code, w.Body.String())
+	}
+	if ct := w.Header().Get("Content-Type"); ct != "application/javascript" {
+		t.Errorf("remember.js content-type = %q", ct)
+	}
+
+	// The login page includes the remember script so the visitor's deep link
+	// (hash fragment) survives the login redirect.
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/", nil))
+	if !strings.Contains(w.Body.String(), "/auth/totp/remember.js") {
+		t.Errorf("login page should embed the remember script, got: %s", w.Body.String())
+	}
+
 	// CORS preflight passes through so corsMiddleware can answer it.
 	w = httptest.NewRecorder()
 	h.ServeHTTP(w, httptest.NewRequest(http.MethodOptions, "/create/secret", nil))

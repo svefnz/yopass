@@ -180,6 +180,28 @@ func (y *Server) totpLoginHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, next, http.StatusFound)
 }
 
+// totpRememberJS is injected into the login page. Yopass deep links carry
+// their payload in the URL fragment (e.g. /#/s/{uuid}/{key}), which browsers
+// never send to the server — so the gate's login redirect can only return the
+// visitor to the server-visible path. This script snapshots the real URL into
+// sessionStorage before the form navigation discards it; the web app restores
+// it on boot (see main.tsx). Same-origin and load-time only, so the strict
+// script-src 'self' CSP stays intact.
+const totpRememberJS = `(function () {
+  if (location.pathname.indexOf('/auth/totp') === 0) return;
+  if (location.pathname === '/' && !location.hash && !location.search) return;
+  if (!sessionStorage.getItem('yopass_totp_next')) {
+    sessionStorage.setItem('yopass_totp_next', location.href);
+  }
+})();`
+
+// totpRememberJSHandler serves the remember-script for the login page.
+func (y *Server) totpRememberJSHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/javascript")
+	w.Header().Set("Cache-Control", "no-store")
+	w.Write([]byte(totpRememberJS))
+}
+
 // serveTOTPPage renders the gate's login page. It is served both at
 // /auth/totp (after a failed attempt, carrying error=1 and next=) and, for
 // unmatched browser GETs, at the original URL so the address bar keeps the
@@ -262,7 +284,7 @@ func (y *Server) requireTOTPMiddleware(next http.Handler) http.Handler {
 		switch {
 		case r.Method == http.MethodOptions,
 			r.URL.Path == "/health" || r.URL.Path == "/ready",
-			r.URL.Path == "/auth/totp":
+			strings.HasPrefix(r.URL.Path, "/auth/totp"):
 			next.ServeHTTP(w, r)
 		case r.Method == http.MethodGet || r.Method == http.MethodHead:
 			y.serveTOTPPage(w, r, safeNext(r.URL.RequestURI()), false)
@@ -281,6 +303,7 @@ var totpPageTmpl = []*template.Template{
 	template.Must(template.New("en").Parse(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Access required — Yopass</title>
+<script src="/auth/totp/remember.js"></script>
 <style>
   body { font-family: system-ui, sans-serif; background: #f6f6f6; display: flex; min-height: 100vh; margin: 0; }
   main { margin: auto; background: #fff; border-radius: 12px; padding: 2.5rem; width: min(22rem, 90vw); box-shadow: 0 10px 30px rgba(0,0,0,.1); }
@@ -306,6 +329,7 @@ var totpPageTmpl = []*template.Template{
 	template.Must(template.New("zh").Parse(`<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>访问验证 — Yopass</title>
+<script src="/auth/totp/remember.js"></script>
 <style>
   body { font-family: system-ui, sans-serif; background: #f6f6f6; display: flex; min-height: 100vh; margin: 0; }
   main { margin: auto; background: #fff; border-radius: 12px; padding: 2.5rem; width: min(22rem, 90vw); box-shadow: 0 10px 30px rgba(0,0,0,.1); }

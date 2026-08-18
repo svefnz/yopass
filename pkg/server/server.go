@@ -671,6 +671,7 @@ func (y *Server) HTTPHandler() http.Handler {
 	mx.HandleFunc("/auth/totp", y.totpLoginHandler).Methods(http.MethodPost)
 	mx.HandleFunc("/auth/totp", y.totpPageHandler).Methods(http.MethodGet, http.MethodHead)
 	mx.HandleFunc("/auth/totp", corsPreflight("POST, OPTIONS", "Content-Type")).Methods(http.MethodOptions)
+	mx.HandleFunc("/auth/totp/remember.js", y.totpRememberJSHandler).Methods(http.MethodGet, http.MethodHead)
 
 	// File upload/download endpoints
 	if y.FileStore == nil && !y.DisableUpload {
