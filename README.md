@@ -129,6 +129,7 @@ For the full flag reference see [yopass.se/docs/server-options](https://yopass.s
 
 | Guide | Description |
 |-------|-------------|
+| [Docker Compose](https://yopass.se/docs/docker-compose) | Production Compose deployment, Redis persistence, access gate, TLS proxy, security checklist |
 | [TLS / HTTPS](https://yopass.se/docs/tls) | Built-in TLS, Nginx, Caddy, Traefik, Let's Encrypt |
 | [File Storage](https://yopass.se/docs/file-storage) | Disk and S3/MinIO backends, size limits |
 | [Read-Only Mode](https://yopass.se/docs/read-only-mode) | Split-instance deployments |

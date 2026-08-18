@@ -88,6 +88,7 @@ Yopass requires either `--memcached` or `--redis`. Starting without either will 
 
 ## Next steps
 
+- **Production Compose** — [Docker Compose Deployment](./docker-compose) for Redis persistence, the TOTP access gate, TLS and security hardening
 - **Add TLS** — [TLS / HTTPS guide](./tls) to serve over HTTPS
 - **Enable file uploads** — [File Storage guide](./file-storage) for disk or S3 backends
 - **Add authentication** — [OpenID Connect guide](./openid-connect) *(license required)*
