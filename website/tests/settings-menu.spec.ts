@@ -65,6 +65,8 @@ test.describe('Settings menu', () => {
     await expect(
       page.locator('h2:has-text("Kryptera meddelande")'),
     ).toBeVisible();
+    // The menu stays open after the switch; the selector must reflect sv.
+    await expect(page.locator('#settings-language')).toHaveValue('sv');
 
     // The choice is persisted.
     await page.reload();
@@ -72,6 +74,26 @@ test.describe('Settings menu', () => {
     await expect(
       page.locator('h2:has-text("Kryptera meddelande")'),
     ).toBeVisible();
+    await page.click(COG);
+    await expect(page.locator('#settings-language')).toHaveValue('sv');
+  });
+
+  test('manual switch to Chinese persists and stays selected', async ({
+    page,
+  }) => {
+    // Default English context: switch to Chinese by hand, then reload.
+    await mockAPI.mockConfigEndpoint();
+    await open(page);
+
+    await page.selectOption('#settings-language', 'zh');
+    await expect(page.locator('h2:has-text("加密消息")')).toBeVisible();
+    await expect(page.locator('#settings-language')).toHaveValue('zh');
+
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await expect(page.locator('h2:has-text("加密消息")')).toBeVisible();
+    await page.click(COG);
+    await expect(page.locator('#settings-language')).toHaveValue('zh');
   });
 
   test('hides the language setting when NO_LANGUAGE_SWITCHER is set', async ({
@@ -170,5 +192,29 @@ test.describe('Settings menu', () => {
     await page.click(COG);
     await expect(page.locator(MENU)).toBeVisible();
     await expect(page.locator('#settings-language')).toBeVisible();
+  });
+
+  test.describe('Language auto-detection from browser locale', () => {
+    // Emulate a Chinese browser: navigator.language = "zh-CN". The page must
+    // render Chinese AND the language selector must agree — regression: the
+    // selector showed its first option (English) while the page was Chinese
+    // because i18n.language stayed "zh-CN" and matched no <option>.
+    test.use({ locale: 'zh-CN' });
+
+    test('zh-CN browser gets Chinese UI with the selector agreeing', async ({
+      page,
+    }) => {
+      await mockAPI.mockConfigEndpoint();
+      await page.goto('/');
+      await page.waitForLoadState('networkidle');
+
+      await expect(page.locator('h2:has-text("加密消息")')).toBeVisible();
+
+      await page.click(COG);
+      await expect(page.locator('#settings-language')).toHaveValue('zh');
+      await expect(
+        page.locator('#settings-language option:checked'),
+      ).toHaveText('中文');
+    });
   });
 });

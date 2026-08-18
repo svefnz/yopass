@@ -108,7 +108,12 @@ export default function SettingsMenu() {
                 id="settings-language"
                 aria-label={t('settings.language')}
                 className="select select-bordered select-sm w-full"
-                value={i18n.language}
+                // Bind to the resolved base code, not i18n.language: a Chinese
+                // browser reports "zh-CN", i18n.language keeps that region tag
+                // while the registered resource is "zh" — resolvedLanguage is
+                // the base code, so the selector highlights the entry that
+                // matches the language actually rendered
+                value={i18n.resolvedLanguage ?? i18n.language}
                 onChange={e => handleLanguageChange(e.target.value)}
               >
                 {languages.map(language => (
