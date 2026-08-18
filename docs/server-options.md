@@ -178,7 +178,7 @@ Protect the entire instance (UI and API) behind a shared TOTP code: visitors mus
 |------|---------|---------|-------------|
 | `--totp-secret` | `TOTP_SECRET` | — | Base32 TOTP secret enabling the access gate. Generate with `head -c 20 /dev/urandom \| base32 \| tr -d '='`. The startup log prints the `otpauth://` provisioning URI for the configured secret so it can be scanned into an authenticator app |
 
-`/health` and `/ready` stay reachable without the cookie so probes keep working. The gate protects the whole backend; in split deployments where the frontend lives on another origin, put the gate at the reverse proxy instead.
+`/health` and `/ready` stay reachable without the cookie so probes keep working. The gate protects the whole backend; in split deployments where the frontend lives on another origin, put the gate at the reverse proxy instead. See the [TOTP access gate](./totp-access-gate) guide for docker compose examples and operation.
 
 ---
 

@@ -14,7 +14,7 @@ The `yopass` CLI lets you share secrets and files from the terminal using end-to
 go install github.com/jhaals/yopass/cmd/yopass@latest
 ```
 
-> **Note:** Installations protected with OpenID Connect are not supported by the CLI.
+> **Note:** Installations protected with OpenID Connect are not supported by the CLI. Instances behind the [TOTP access gate](./totp-access-gate) also cannot use the CLI — the gate requires an interactive code prompt that the CLI has no way to complete.
 
 ## Configuration
 
