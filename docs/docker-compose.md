@@ -10,7 +10,7 @@ This guide builds a production-ready Yopass with Docker Compose: storage backend
 
 ## 1. Production template
 
-**Memcached** is what the [quick start](./quickstart) uses. It is ephemeral by design: a restart of the memcached container wipes all stored secrets. That is acceptable for yopass semantics (secrets self-destruct within a week anyway), but if you want data to survive restarts, use the [Redis variant](#redis-persistence) instead.
+**Memcached** is what the [quick start](./quickstart) uses. It is ephemeral by design: a restart of the memcached container wipes all stored secrets. That is acceptable for yopass semantics (secrets self-destruct within a week anyway), but if you want data to survive restarts, use the [Redis variant](#2-redis-persistence) instead.
 
 ```yaml title="docker-compose.yml"
 services:
