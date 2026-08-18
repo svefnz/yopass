@@ -19,6 +19,7 @@ const languages = [
   { code: 'es', name: 'Español' },
   { code: 'it', name: 'Italiano' },
   { code: 'ja', name: '日本語' },
+  { code: 'zh', name: '中文' },
 ];
 
 // Cogwheel dropdown bundling the app-wide display settings: language,

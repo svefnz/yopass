@@ -125,6 +125,7 @@ func init() {
 	pflag.String("oidc-session-key", "", "64-byte hex-encoded session key for multi-instance deployments (generate with: openssl rand -hex 64)")
 	pflag.StringSlice("oidc-allowed-domains", []string{}, "restrict secret creation to users whose email matches one of these domains (comma-separated, e.g. corp.example.com,example.com)")
 	pflag.StringSlice("api-token", []string{}, "static bearer token granting machine clients access to the --require-auth gated creation endpoints, formatted as name:secret (comma-separated for multiple; generate secrets with: openssl rand -hex 32)")
+	pflag.String("totp-secret", "", "base32 TOTP secret enabling an access gate in front of the entire instance: visitors must enter a valid 6-digit authenticator code before the UI or API responds (generate with: head -c 20 /dev/urandom | base32 | tr -d '='; env: TOTP_SECRET)")
 	pflag.String("frontend-url", "", "frontend base URL for post-login redirect in split deployments (e.g. http://localhost:3000)")
 	pflag.Bool("audit-log", false, "enable structured audit logging to NDJSON (requires valid license)")
 	pflag.String("audit-log-file", "", "file path for audit log output (default: stdout)")
@@ -210,6 +211,11 @@ func main() {
 		logger.Info("API token authentication enabled", zap.Strings("tokens", names))
 	}
 
+	totpSecret, err := setupTOTP(logger)
+	if err != nil {
+		logger.Fatal(err.Error(), zap.Error(err))
+	}
+
 	auditLogger, err := setupAuditLogger(logger)
 	if err != nil {
 		logger.Fatal("failed to initialize audit logger", zap.Error(err))
@@ -282,6 +288,7 @@ func main() {
 		RequireAuth:         viper.GetBool("require-auth"),
 		AllowedEmailDomains: getStringSliceCSV("oidc-allowed-domains"),
 		APITokens:           apiTokens,
+		TOTPSecret:          totpSecret,
 
 		CORSAllowOrigin:  viper.GetString("cors-allow-origin"),
 		FrontendURL:      viper.GetString("frontend-url"),
@@ -531,6 +538,23 @@ func resolveAPITokens() ([]server.APIToken, error) {
 		return nil, errors.New("--api-token is set but --require-auth is not — API tokens only apply when creation requires authentication")
 	}
 	return tokens, nil
+}
+
+// setupTOTP parses --totp-secret when set and logs the provisioning URI so
+// the operator can scan the secret into their authenticator app. Returns
+// nil (gate off) when the flag is empty.
+func setupTOTP(logger *zap.Logger) ([]byte, error) {
+	raw := viper.GetString("totp-secret")
+	if raw == "" {
+		return nil, nil
+	}
+	secret, err := server.ParseTOTPSecret(raw)
+	if err != nil {
+		return nil, fmt.Errorf("invalid --totp-secret: %w", err)
+	}
+	logger.Info("TOTP access gate enabled",
+		zap.String("provisioning_uri", server.TOTPProvisioningURI(secret)))
+	return secret, nil
 }
 
 // setupAuditLogger builds the audit logger, or the no-op implementation when

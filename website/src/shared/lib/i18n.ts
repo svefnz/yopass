@@ -18,6 +18,7 @@ import {
   ja,
   it,
   ro,
+  zh,
 } from '../locales';
 
 i18n
@@ -66,6 +67,9 @@ i18n
       },
       ro: {
         translation: ro,
+      },
+      zh: {
+        translation: zh,
       },
     },
     fallbackLng: 'en',

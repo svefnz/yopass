@@ -59,6 +59,10 @@ type Server struct {
 	RequireAuth         bool       // require authentication to create secrets
 	AllowedEmailDomains []string   // restrict logins to these email domains
 	APITokens           []APIToken // static bearer tokens for machine-to-machine creation
+	// TOTPSecret, when non-nil, enables a TOTP access gate in front of the
+	// whole instance: every request must carry a session cookie issued after
+	// the visitor enters a valid code from the shared authenticator secret.
+	TOTPSecret []byte
 
 	// URLs and CORS
 	CORSAllowOrigin  string
@@ -661,6 +665,13 @@ func (y *Server) HTTPHandler() http.Handler {
 		mx.HandleFunc("/auth/me", y.oidcMeHandler).Methods(http.MethodGet)
 	}
 
+	// TOTP access gate endpoints. When the gate is enabled (TOTPSecret set)
+	// these are exempted by requireTOTPMiddleware so the login flow itself
+	// stays reachable; when it is not, they simply 404.
+	mx.HandleFunc("/auth/totp", y.totpLoginHandler).Methods(http.MethodPost)
+	mx.HandleFunc("/auth/totp", y.totpPageHandler).Methods(http.MethodGet, http.MethodHead)
+	mx.HandleFunc("/auth/totp", corsPreflight("POST, OPTIONS", "Content-Type")).Methods(http.MethodOptions)
+
 	// File upload/download endpoints
 	if y.FileStore == nil && !y.DisableUpload {
 		y.FileStore = NewDatabaseFileStore(y.DB)
@@ -685,13 +696,18 @@ func (y *Server) HTTPHandler() http.Handler {
 
 	mx.PathPrefix("/").Handler(http.FileServer(http.Dir(y.AssetPath)))
 
+	var handler http.Handler = mx
+	if y.TOTPSecret != nil {
+		handler = y.requireTOTPMiddleware(handler)
+	}
+
 	var extraImgSrc []string
 	if y.LogoURL != "" {
 		if u, err := url.Parse(y.LogoURL); err == nil && u.IsAbs() && u.Host != "" {
 			extraImgSrc = []string{u.Scheme + "://" + u.Host}
 		}
 	}
-	return handlers.CustomLoggingHandler(nil, SecurityHeadersHandler(extraImgSrc, y.Argon2, mx), y.httpLogFormatter())
+	return handlers.CustomLoggingHandler(nil, SecurityHeadersHandler(extraImgSrc, y.Argon2, handler), y.httpLogFormatter())
 }
 
 const keyParameter = "{key:(?:[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}|[a-zA-Z0-9]{22})}"

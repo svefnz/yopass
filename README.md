@@ -110,6 +110,21 @@ yopass-server --database redis --redis redis://localhost:6379/0
 
 Password key derivation can optionally be hardened with memory-hard [Argon2id](https://datatracker.ietf.org/doc/rfc9106/) via the `--argon2` flag. It is opt-in because it requires the `'wasm-unsafe-eval'` CSP directive, which reverse proxies that override the `Content-Security-Policy` header must add manually — see [Argon2 key derivation](https://yopass.se/docs/server-options#argon2-key-derivation).
 
+### TOTP access gate (no license required)
+
+A whole-instance access gate can be enabled with a shared TOTP secret (`--totp-secret` / `TOTP_SECRET`): visitors must enter a 6-digit code from an authenticator app before the UI or API responds at all. It is the equivalent of a door lock in front of the whole service — independent of OIDC, which can be used on top for per-user identity. After a successful verification the browser keeps a signed session cookie for 7 days.
+
+```bash
+# 1. Generate a base32 secret and scan the provisioning URI logged at startup
+#    (or scan it into your authenticator app directly):
+head -c 20 /dev/urandom | base32 | tr -d '='
+
+# 2. Start the server with the secret
+TOTP_SECRET=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ yopass-server
+```
+
+The start-up log line `TOTP access gate enabled` includes the `otpauth://` provisioning URI for the configured secret, so it can be scanned into any authenticator app (Google Authenticator, Aegis, 1Password, …). `--health`/`ready` and the gate's own login endpoint stay reachable without the cookie; everything else returns the login page (browser) or a 401 (API clients) until a valid code is entered. Failed attempts are rate-limited per IP (10/minute). The gate protects the whole backend; in split deployments where the frontend is hosted on another origin, put the gate at the reverse proxy instead.
+
 For the full flag reference see [yopass.se/docs/server-options](https://yopass.se/docs/server-options). Topic-specific guides:
 
 | Guide | Description |

@@ -15,4 +15,5 @@ export { default as no } from './no.json';
 export { default as cs } from './cs.json';
 export { default as ja } from './ja.json';
 export { default as ro } from './ro.json';
+export { default as zh } from './zh.json';
 // export { default as es } from './es.json';
